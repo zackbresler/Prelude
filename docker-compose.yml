@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  prelude:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - prelude-data:/app/server/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=file:./data/prelude.db
+      - SESSION_SECRET=${SESSION_SECRET:-change-this-to-a-secure-random-string}
+      - SESSION_MAX_AGE=${SESSION_MAX_AGE:-604800000}
+      - ALLOW_REGISTRATION=${ALLOW_REGISTRATION:-false}
+      - REQUIRE_APPROVAL=${REQUIRE_APPROVAL:-false}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}
+      - ADMIN_NAME=${ADMIN_NAME:-Administrator}
+      # Cookie secure setting - defaults to HTTPS in production
+      # Set to 'false' only if not using HTTPS
+      - COOKIE_SECURE=${COOKIE_SECURE:-auto}
+    restart: unless-stopped
+
+volumes:
+  prelude-data:
+    driver: local

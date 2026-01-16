@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(echo:*)",
+      "Bash(brew install:*)",
+      "Bash(npm run build:*)",
+      "Bash(tree:*)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npx tsx:*)",
+      "Bash(timeout 5 npm run start:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}

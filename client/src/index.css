@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-surface-400 text-gray-100 font-sans antialiased;
+  }
+
+  /* Custom scrollbar for dark theme */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-surface-300;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-50 rounded;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-400;
+  }
+
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-500 focus:ring-primary-500 shadow-lg shadow-primary-600/20;
+  }
+
+  .btn-secondary {
+    @apply bg-surface-100 text-gray-200 hover:bg-surface-50 focus:ring-gray-500 border border-surface-50;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-500 focus:ring-red-500;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-gray-300 hover:bg-surface-200 hover:text-gray-100;
+  }
+
+  .input {
+    @apply block w-full rounded-lg border border-surface-50 bg-surface-300 px-3 py-2 text-gray-100 placeholder-gray-500
+           focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 transition-colors;
+  }
+
+  .input-dark {
+    @apply block w-full rounded-lg border border-surface-100 bg-surface-400 px-3 py-2 text-gray-100 placeholder-gray-500
+           focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 transition-colors;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-gray-400 mb-1;
+  }
+
+  .section-card {
+    @apply bg-surface-300 rounded-xl shadow-lg border border-surface-100 p-6;
+  }
+
+  /* DAW-style track/card styling */
+  .track-card {
+    @apply bg-surface-200 rounded-lg border border-surface-100 p-4 hover:border-surface-50 transition-colors;
+  }
+
+  /* Glowing accent for active/selected states */
+  .glow-primary {
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3), 0 0 40px rgba(6, 182, 212, 0.1);
+  }
+
+  .glow-accent {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.3), 0 0 40px rgba(245, 158, 11, 0.1);
+  }
+}
+
+/* Smooth transitions for theme */
+* {
+  transition-property: background-color, border-color;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+/* Override for elements that shouldn't transition */
+input, textarea, button, a {
+  transition-property: background-color, border-color, color, box-shadow, transform;
+}

@@ -1,0 +1,41 @@
+# Dependencies
+node_modules
+*/node_modules
+
+# Build outputs
+client/dist
+server/dist
+
+# Development files
+.git
+.gitignore
+*.md
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+coverage
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Database files (will be created in container)
+server/data
+*.db
+*.db-journal
+
+# Logs
+*.log
+npm-debug.log*
