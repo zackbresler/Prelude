@@ -15,9 +15,11 @@ export default function SessionSchedule() {
     addSession,
     updateSession,
     deleteSession,
+    reorderSession,
     addScheduleBlock,
     updateScheduleBlock,
     deleteScheduleBlock,
+    reorderScheduleBlock,
   } = useProjectStore();
   const project = getCurrentProject();
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
@@ -50,7 +52,7 @@ export default function SessionSchedule() {
             <p>No sessions scheduled yet. Click 'Add Session' to plan your recording days.</p>
           </div>
         ) : (
-          project.sessions.map((session) => (
+          project.sessions.map((session, index) => (
             <SessionCard
               key={session.id}
               session={session}
@@ -58,6 +60,9 @@ export default function SessionSchedule() {
               onToggle={() => setExpandedSession(expandedSession === session.id ? null : session.id)}
               onUpdate={(updates) => updateSession(session.id, updates)}
               onDelete={() => deleteSession(session.id)}
+              onReorder={(direction) => reorderSession(session.id, direction)}
+              isFirst={index === 0}
+              isLast={index === project.sessions.length - 1}
               scheduleColumns={scheduleColumns}
               onAddBlock={() =>
                 addScheduleBlock(session.id, {
@@ -69,6 +74,7 @@ export default function SessionSchedule() {
               }
               onUpdateBlock={(blockId, updates) => updateScheduleBlock(session.id, blockId, updates)}
               onDeleteBlock={(blockId) => deleteScheduleBlock(session.id, blockId)}
+              onReorderBlock={(blockId, direction) => reorderScheduleBlock(session.id, blockId, direction)}
             />
           ))
         )}
@@ -86,10 +92,14 @@ interface SessionCardProps {
   onToggle: () => void;
   onUpdate: (updates: Partial<Session>) => void;
   onDelete: () => void;
+  onReorder: (direction: 'up' | 'down') => void;
+  isFirst: boolean;
+  isLast: boolean;
   scheduleColumns: Column<ScheduleBlock>[];
   onAddBlock: () => void;
   onUpdateBlock: (blockId: string, updates: Partial<ScheduleBlock>) => void;
   onDeleteBlock: (blockId: string) => void;
+  onReorderBlock: (blockId: string, direction: 'up' | 'down') => void;
 }
 
 function SessionCard({
@@ -98,10 +108,14 @@ function SessionCard({
   onToggle,
   onUpdate,
   onDelete,
+  onReorder,
+  isFirst,
+  isLast,
   scheduleColumns,
   onAddBlock,
   onUpdateBlock,
   onDeleteBlock,
+  onReorderBlock,
 }: SessionCardProps) {
   const formattedDate = session.date ? format(new Date(session.date), 'EEEE, MMMM d, yyyy') : 'Date not set';
 
@@ -128,18 +142,49 @@ function SessionCard({
             </p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (confirm('Delete this session?')) onDelete();
-          }}
-        >
-          <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onReorder('up');
+            }}
+            disabled={isFirst}
+            title="Move up"
+          >
+            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+            </svg>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onReorder('down');
+            }}
+            disabled={isLast}
+            title="Move down"
+          >
+            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirm('Delete this session?')) onDelete();
+            }}
+            title="Delete"
+          >
+            <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </Button>
+        </div>
       </div>
 
       {isExpanded && (
@@ -185,6 +230,7 @@ function SessionCard({
               onAdd={onAddBlock}
               onUpdate={onUpdateBlock}
               onDelete={onDeleteBlock}
+              onReorder={onReorderBlock}
               addLabel="Add Time Block"
               emptyMessage="No schedule blocks yet. Add time blocks to plan your session."
             />

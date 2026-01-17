@@ -90,6 +90,13 @@ export interface EquipmentItem {
   notes?: string;
 }
 
+export interface Preamp {
+  id: string;
+  name: string;
+  channelsPerUnit: number;
+  quantity: number;
+}
+
 export interface SetupDiagram {
   id: string;
   url: string;
@@ -163,6 +170,7 @@ export interface Project {
   microphonePlan: MicrophonePlanItem[];
   inputList: InputListItem[];
   equipment: EquipmentItem[];
+  preamps: Preamp[];
   setupNotes: SetupNotes;
   atmosConfig?: AtmosConfig;
   timeline: TimelinePhase[];

@@ -15,7 +15,7 @@ const PHASE_OPTIONS = [
 ];
 
 export default function Timeline() {
-  const { getCurrentProject, addTimeline, updateTimeline, deleteTimeline } = useProjectStore();
+  const { getCurrentProject, addTimeline, updateTimeline, deleteTimeline, reorderTimeline } = useProjectStore();
   const project = getCurrentProject();
 
   if (!project) return null;
@@ -81,6 +81,7 @@ export default function Timeline() {
         }
         onUpdate={updateTimeline}
         onDelete={deleteTimeline}
+        onReorder={reorderTimeline}
         addLabel="Add Phase"
         emptyMessage="No timeline phases added yet. Click 'Add Phase' to plan your project timeline."
       />

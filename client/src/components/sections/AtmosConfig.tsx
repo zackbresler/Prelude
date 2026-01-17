@@ -1,5 +1,5 @@
 import { useProjectStore } from '@/store/projectStore';
-import { Section, Input, Select, Table, Column, RichTextEditor } from '@/components/common';
+import { Section, Input, Select, Table, Column, RichTextEditor, Button } from '@/components/common';
 import type { AtmosTrack } from '@/types/project';
 
 const BED_FORMAT_OPTIONS = [
@@ -42,7 +42,7 @@ const OBJECT_BEHAVIOR_OPTIONS = [
 ];
 
 export default function AtmosConfig() {
-  const { getCurrentProject, updateAtmosConfig, addAtmosTrack, updateAtmosTrack, deleteAtmosTrack } = useProjectStore();
+  const { getCurrentProject, updateAtmosConfig, addAtmosTrack, updateAtmosTrack, deleteAtmosTrack, reorderAtmosTrack } = useProjectStore();
   const project = getCurrentProject();
 
   if (!project || !project.atmosConfig) return null;
@@ -57,6 +57,36 @@ export default function AtmosConfig() {
     { key: 'heightLayer', header: 'Height Layer', type: 'select', options: HEIGHT_LAYER_OPTIONS, width: '110px' },
     { key: 'notes', header: 'Notes', placeholder: 'Position, automation, etc.' },
   ];
+
+  const importFromInputList = () => {
+    // Get existing track names in atmos config (case-insensitive)
+    const existingTracks = new Set(
+      atmosConfig.tracks.map((t) => t.name.toLowerCase())
+    );
+
+    // Add sources from input list that aren't already in the atmos tracks
+    let added = 0;
+    for (const input of project.inputList) {
+      if (input.source && !existingTracks.has(input.source.toLowerCase())) {
+        addAtmosTrack({
+          name: input.source,
+          type: 'object',
+          bedAssignment: '',
+          objectBehavior: 'static',
+          heightLayer: 'floor',
+          notes: `Ch ${input.channel}`,
+        });
+        existingTracks.add(input.source.toLowerCase());
+        added++;
+      }
+    }
+
+    if (added === 0) {
+      alert('All sources from the input list are already in the Atmos track allocation.');
+    }
+  };
+
+  const hasInputsToImport = project.inputList.some((i) => i.source);
 
   return (
     <div className="space-y-6">
@@ -99,6 +129,13 @@ export default function AtmosConfig() {
       </Section>
 
       <Section title="Atmos Track Allocation" description="Bed and object assignments for each element">
+        {hasInputsToImport && (
+          <div className="mb-4">
+            <Button variant="secondary" size="sm" onClick={importFromInputList}>
+              Import Sources from Input List
+            </Button>
+          </div>
+        )}
         <Table
           columns={columns}
           data={atmosConfig.tracks}
@@ -114,6 +151,7 @@ export default function AtmosConfig() {
           }
           onUpdate={updateAtmosTrack}
           onDelete={deleteAtmosTrack}
+          onReorder={reorderAtmosTrack}
           addLabel="Add Track"
           emptyMessage="No tracks allocated yet. Click 'Add Track' to plan your Atmos layout."
         />

@@ -24,6 +24,9 @@ function htmlToPlainText(html: string): string {
   const temp = document.createElement('div');
   temp.innerHTML = html;
 
+  // Remove style and script tags (e.g., from Word-pasted content)
+  temp.querySelectorAll('style, script').forEach((el) => el.remove());
+
   // Process lists
   temp.querySelectorAll('ul').forEach((ul) => {
     ul.querySelectorAll('li').forEach((li) => {

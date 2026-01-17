@@ -3,7 +3,7 @@ import { Section, Table, Column } from '@/components/common';
 import type { MicrophonePlanItem } from '@/types/project';
 
 export default function MicrophonePlan() {
-  const { getCurrentProject, addMicrophonePlan, updateMicrophonePlan, deleteMicrophonePlan } = useProjectStore();
+  const { getCurrentProject, addMicrophonePlan, updateMicrophonePlan, deleteMicrophonePlan, reorderMicrophonePlan } = useProjectStore();
   const project = getCurrentProject();
 
   if (!project) return null;
@@ -27,6 +27,7 @@ export default function MicrophonePlan() {
         onAdd={() => addMicrophonePlan({ source: '', microphone: '', quantity: 1, position: '', notes: '' })}
         onUpdate={updateMicrophonePlan}
         onDelete={deleteMicrophonePlan}
+        onReorder={reorderMicrophonePlan}
         addLabel="Add Microphone"
         emptyMessage="No microphones planned yet. Click 'Add Microphone' to build your mic plan."
       />

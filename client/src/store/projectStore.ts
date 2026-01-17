@@ -54,30 +54,42 @@ interface ProjectStore {
   addMicrophonePlan: (item: Omit<Project['microphonePlan'][0], 'id'>) => void;
   updateMicrophonePlan: (id: string, item: Partial<Project['microphonePlan'][0]>) => void;
   deleteMicrophonePlan: (id: string) => void;
+  reorderMicrophonePlan: (id: string, direction: 'up' | 'down') => void;
 
   addInputList: (item: Omit<Project['inputList'][0], 'id'>) => void;
   updateInputList: (id: string, item: Partial<Project['inputList'][0]>) => void;
   deleteInputList: (id: string) => void;
+  reorderInputList: (id: string, direction: 'up' | 'down') => void;
 
   addEquipment: (item: Omit<Project['equipment'][0], 'id'>) => void;
   updateEquipment: (id: string, item: Partial<Project['equipment'][0]>) => void;
   deleteEquipment: (id: string) => void;
+  reorderEquipment: (id: string, direction: 'up' | 'down') => void;
+
+  addPreamp: (item: Omit<Project['preamps'][0], 'id'>) => void;
+  updatePreamp: (id: string, item: Partial<Project['preamps'][0]>) => void;
+  deletePreamp: (id: string) => void;
+  reorderPreamp: (id: string, direction: 'up' | 'down') => void;
 
   addTimeline: (item: Omit<Project['timeline'][0], 'id'>) => void;
   updateTimeline: (id: string, item: Partial<Project['timeline'][0]>) => void;
   deleteTimeline: (id: string) => void;
+  reorderTimeline: (id: string, direction: 'up' | 'down') => void;
 
   addSession: (item: Omit<Project['sessions'][0], 'id'>) => void;
   updateSession: (id: string, item: Partial<Project['sessions'][0]>) => void;
   deleteSession: (id: string) => void;
+  reorderSession: (id: string, direction: 'up' | 'down') => void;
 
   addScheduleBlock: (sessionId: string, item: Omit<Project['sessions'][0]['schedule'][0], 'id'>) => void;
   updateScheduleBlock: (sessionId: string, blockId: string, item: Partial<Project['sessions'][0]['schedule'][0]>) => void;
   deleteScheduleBlock: (sessionId: string, blockId: string) => void;
+  reorderScheduleBlock: (sessionId: string, blockId: string, direction: 'up' | 'down') => void;
 
   addAtmosTrack: (item: Omit<NonNullable<Project['atmosConfig']>['tracks'][0], 'id'>) => void;
   updateAtmosTrack: (id: string, item: Partial<NonNullable<Project['atmosConfig']>['tracks'][0]>) => void;
   deleteAtmosTrack: (id: string) => void;
+  reorderAtmosTrack: (id: string, direction: 'up' | 'down') => void;
 
   // Image actions
   addVenueImage: (image: Omit<Project['venue']['images'][0], 'id'>) => void;
@@ -122,6 +134,7 @@ const createEmptyProject = (name: string, projectType: ProjectType): Project => 
   microphonePlan: [],
   inputList: [],
   equipment: [],
+  preamps: [],
   setupNotes: {
     description: '',
     diagrams: [],
@@ -152,6 +165,19 @@ const saveProject = async (project: Project) => {
       console.error('Failed to save project:', error);
     }
   }, 500);
+};
+
+// Helper to reorder an array by moving an item up or down
+const reorderArray = <T extends { id: string }>(arr: T[], id: string, direction: 'up' | 'down'): T[] => {
+  const index = arr.findIndex((item) => item.id === id);
+  if (index === -1) return arr;
+  if (direction === 'up' && index === 0) return arr;
+  if (direction === 'down' && index === arr.length - 1) return arr;
+
+  const newArr = [...arr];
+  const swapIndex = direction === 'up' ? index - 1 : index + 1;
+  [newArr[index], newArr[swapIndex]] = [newArr[swapIndex], newArr[index]];
+  return newArr;
 };
 
 export const useProjectStore = create<ProjectStore>()((set, get) => ({
@@ -457,6 +483,18 @@ export const useProjectStore = create<ProjectStore>()((set, get) => ({
     set({ currentProject: updated });
     saveProject(updated);
   },
+  reorderMicrophonePlan: (id, direction) => {
+    const { currentProject } = get();
+    if (!currentProject) return;
+
+    const updated = {
+      ...currentProject,
+      microphonePlan: reorderArray(currentProject.microphonePlan, id, direction),
+      updatedAt: new Date().toISOString(),
+    };
+    set({ currentProject: updated });
+    saveProject(updated);
+  },
 
   // Input List
   addInputList: (item) => {
@@ -490,6 +528,18 @@ export const useProjectStore = create<ProjectStore>()((set, get) => ({
     const updated = {
       ...currentProject,
       inputList: currentProject.inputList.filter((i) => i.id !== id),
+      updatedAt: new Date().toISOString(),
+    };
+    set({ currentProject: updated });
+    saveProject(updated);
+  },
+  reorderInputList: (id, direction) => {
+    const { currentProject } = get();
+    if (!currentProject) return;
+
+    const updated = {
+      ...currentProject,
+      inputList: reorderArray(currentProject.inputList, id, direction),
       updatedAt: new Date().toISOString(),
     };
     set({ currentProject: updated });
@@ -533,6 +583,68 @@ export const useProjectStore = create<ProjectStore>()((set, get) => ({
     set({ currentProject: updated });
     saveProject(updated);
   },
+  reorderEquipment: (id, direction) => {
+    const { currentProject } = get();
+    if (!currentProject) return;
+
+    const updated = {
+      ...currentProject,
+      equipment: reorderArray(currentProject.equipment, id, direction),
+      updatedAt: new Date().toISOString(),
+    };
+    set({ currentProject: updated });
+    saveProject(updated);
+  },
+
+  // Preamps
+  addPreamp: (item) => {
+    const { currentProject } = get();
+    if (!currentProject) return;
+
+    const updated = {
+      ...currentProject,
+      preamps: [...(currentProject.preamps || []), { ...item, id: uuidv4() }],
+      updatedAt: new Date().toISOString(),
+    };
+    set({ currentProject: updated });
+    saveProject(updated);
+  },
+  updatePreamp: (id, item) => {
+    const { currentProject } = get();
+    if (!currentProject) return;
+
+    const updated = {
+      ...currentProject,
+      preamps: (currentProject.preamps || []).map((i) => (i.id === id ? { ...i, ...item } : i)),
+      updatedAt: new Date().toISOString(),
+    };
+    set({ currentProject: updated });
+    saveProject(updated);
+  },
+  deletePreamp: (id) => {
+    const { currentProject } = get();
+    if (!currentProject) return;
+
+    const updated = {
+      ...currentProject,
+      preamps: (currentProject.preamps || []).filter((i) => i.id !== id),
+      updatedAt: new Date().toISOString(),
+    };
+    set({ currentProject: updated });
+    saveProject(updated);
+  },
+  reorderPreamp: (id, direction) => {
+    const { currentProject } = get();
+    if (!currentProject) return;
+
+    const updated = {
+      ...currentProject,
+      preamps: reorderArray(currentProject.preamps || [], id, direction),
+      updatedAt: new Date().toISOString(),
+    };
+    set({ currentProject: updated });
+    saveProject(updated);
+  },
 
   // Timeline
   addTimeline: (item) => {
@@ -571,6 +683,18 @@ export const useProjectStore = create<ProjectStore>()((set, get) => ({
     set({ currentProject: updated });
     saveProject(updated);
   },
+  reorderTimeline: (id, direction) => {
+    const { currentProject } = get();
+    if (!currentProject) return;
+
+    const updated = {
+      ...currentProject,
+      timeline: reorderArray(currentProject.timeline, id, direction),
+      updatedAt: new Date().toISOString(),
+    };
+    set({ currentProject: updated });
+    saveProject(updated);
+  },
 
   // Sessions
   addSession: (item) => {
@@ -604,6 +728,18 @@ export const useProjectStore = create<ProjectStore>()((set, get) => ({
     const updated = {
       ...currentProject,
       sessions: currentProject.sessions.filter((i) => i.id !== id),
+      updatedAt: new Date().toISOString(),
+    };
+    set({ currentProject: updated });
+    saveProject(updated);
+  },
+  reorderSession: (id, direction) => {
+    const { currentProject } = get();
+    if (!currentProject) return;
+
+    const updated = {
+      ...currentProject,
+      sessions: reorderArray(currentProject.sessions, id, direction),
       updatedAt: new Date().toISOString(),
     };
     set({ currentProject: updated });
@@ -653,6 +789,20 @@ export const useProjectStore = create<ProjectStore>()((set, get) => ({
     set({ currentProject: updated });
     saveProject(updated);
   },
+  reorderScheduleBlock: (sessionId, blockId, direction) => {
+    const { currentProject } = get();
+    if (!currentProject) return;
+
+    const updated = {
+      ...currentProject,
+      sessions: currentProject.sessions.map((s) =>
+        s.id === sessionId ? { ...s, schedule: reorderArray(s.schedule, blockId, direction) } : s
+      ),
+      updatedAt: new Date().toISOString(),
+    };
+    set({ currentProject: updated });
+    saveProject(updated);
+  },
 
   // Atmos tracks
   addAtmosTrack: (item) => {
@@ -689,6 +839,18 @@ export const useProjectStore = create<ProjectStore>()((set, get) => ({
     const updated = {
       ...currentProject,
       atmosConfig: { ...currentProject.atmosConfig, tracks: currentProject.atmosConfig.tracks.filter((t) => t.id !== id) },
+      updatedAt: new Date().toISOString(),
+    };
+    set({ currentProject: updated });
+    saveProject(updated);
+  },
+  reorderAtmosTrack: (id, direction) => {
+    const { currentProject } = get();
+    if (!currentProject || !currentProject.atmosConfig) return;
+
+    const updated = {
+      ...currentProject,
+      atmosConfig: { ...currentProject.atmosConfig, tracks: reorderArray(currentProject.atmosConfig.tracks, id, direction) },
       updatedAt: new Date().toISOString(),
     };
     set({ currentProject: updated });

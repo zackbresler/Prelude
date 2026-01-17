@@ -18,6 +18,7 @@ interface TableProps<T extends { id: string }> {
   onAdd: () => void;
   onUpdate: (id: string, updates: Partial<T>) => void;
   onDelete: (id: string) => void;
+  onReorder?: (id: string, direction: 'up' | 'down') => void;
   addLabel?: string;
   emptyMessage?: string;
 }
@@ -28,6 +29,7 @@ export default function Table<T extends { id: string }>({
   onAdd,
   onUpdate,
   onDelete,
+  onReorder,
   addLabel = 'Add Row',
   emptyMessage = 'No items yet. Click the button below to add one.',
 }: TableProps<T>) {
@@ -62,7 +64,7 @@ export default function Table<T extends { id: string }>({
                   {col.header}
                 </th>
               ))}
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider w-20">
+              <th className={`px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider ${onReorder ? 'w-32' : 'w-20'}`}>
                 Actions
               </th>
             </tr>
@@ -116,11 +118,39 @@ export default function Table<T extends { id: string }>({
                     </td>
                   ))}
                   <td className="px-4 py-2 text-right">
-                    <Button variant="ghost" size="sm" onClick={() => onDelete(item.id)}>
-                      <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      {onReorder && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onReorder(item.id, 'up')}
+                            disabled={index === 0}
+                            title="Move up"
+                          >
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                            </svg>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onReorder(item.id, 'down')}
+                            disabled={index === data.length - 1}
+                            title="Move down"
+                          >
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </Button>
+                        </>
+                      )}
+                      <Button variant="ghost" size="sm" onClick={() => onDelete(item.id)} title="Delete">
+                        <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))

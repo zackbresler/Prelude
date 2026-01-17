@@ -21,7 +21,7 @@ const CATEGORY_OPTIONS = [
 ];
 
 export default function Equipment() {
-  const { getCurrentProject, addEquipment, updateEquipment, deleteEquipment } = useProjectStore();
+  const { getCurrentProject, addEquipment, updateEquipment, deleteEquipment, reorderEquipment } = useProjectStore();
   const project = getCurrentProject();
 
   if (!project) return null;
@@ -99,6 +99,7 @@ export default function Equipment() {
         }
         onUpdate={updateEquipment}
         onDelete={deleteEquipment}
+        onReorder={reorderEquipment}
         addLabel="Add Equipment"
         emptyMessage="No equipment listed yet. Click 'Add Equipment' to build your gear list."
       />
