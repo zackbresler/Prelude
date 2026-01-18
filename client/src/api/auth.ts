@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from './client';
+import { apiGet, apiPost, apiPut } from './client';
 
 export interface User {
   id: string;
@@ -31,4 +31,8 @@ export async function getMe(): Promise<User | null> {
   } catch {
     return null;
   }
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await apiPut('/api/auth/change-password', { currentPassword, newPassword });
 }

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useProjectStore } from '@/store/projectStore';
 import { useAuthStore } from '@/store/authStore';
 import { PROJECT_TYPE_LABELS } from '@/types/project';
@@ -5,11 +6,13 @@ import { Button } from '@/components/common';
 import { exportToPDF } from '@/export/exportPDF';
 import { exportToDOCX } from '@/export/exportDOCX';
 import { exportToJSON } from '@/export/exportJSON';
+import ChangePasswordModal from '@/components/auth/ChangePasswordModal';
 
 export default function Header() {
   const { getCurrentProject } = useProjectStore();
   const { user, logout } = useAuthStore();
   const project = getCurrentProject();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   if (!project) return null;
 
@@ -69,6 +72,12 @@ export default function Header() {
           <div className="flex items-center gap-3 pl-4 border-l border-surface-100">
             <span className="text-sm text-gray-400">{user?.name}</span>
             <button
+              onClick={() => setShowPasswordModal(true)}
+              className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              Change Password
+            </button>
+            <button
               onClick={logout}
               className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
             >
@@ -77,6 +86,11 @@ export default function Header() {
           </div>
         </div>
       </div>
+
+      <ChangePasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+      />
     </header>
   );
 }

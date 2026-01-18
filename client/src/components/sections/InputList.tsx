@@ -47,7 +47,7 @@ export default function InputList() {
     { key: 'microphone', header: 'Microphone', placeholder: 'e.g., D112, SM57' },
     preampChannelOptions.length > 0
       ? { key: 'preamp', header: 'Preamp', type: 'select', options: preampChannelOptions, width: '180px' }
-      : { key: 'preamp', header: 'Preamp', placeholder: 'Add preamps below first' },
+      : { key: 'preamp', header: 'Preamp', placeholder: 'Add preamps above first' },
     { key: 'notes', header: 'Notes', placeholder: 'Insert, processing, etc.' },
   ];
 
@@ -59,6 +59,28 @@ export default function InputList() {
 
   return (
     <div className="space-y-8">
+      <Section
+        title="Preamp Configuration"
+        description="Define your preamps to enable channel selection in the input list below"
+      >
+        <Table
+          columns={preampColumns}
+          data={project.preamps || []}
+          onAdd={() =>
+            addPreamp({
+              name: '',
+              channelsPerUnit: 8,
+              quantity: 1,
+            })
+          }
+          onUpdate={updatePreamp}
+          onDelete={deletePreamp}
+          onReorder={reorderPreamp}
+          addLabel="Add Preamp"
+          emptyMessage="No preamps defined yet. Add preamps to enable channel selection in the input list."
+        />
+      </Section>
+
       <Section
         title="Input List"
         description="Channel assignments from source to console/interface"
@@ -80,28 +102,6 @@ export default function InputList() {
           onReorder={reorderInputList}
           addLabel="Add Channel"
           emptyMessage="No channels assigned yet. Click 'Add Channel' to build your input list."
-        />
-      </Section>
-
-      <Section
-        title="Preamp Configuration"
-        description="Define your preamps to enable channel selection in the input list above"
-      >
-        <Table
-          columns={preampColumns}
-          data={project.preamps || []}
-          onAdd={() =>
-            addPreamp({
-              name: '',
-              channelsPerUnit: 8,
-              quantity: 1,
-            })
-          }
-          onUpdate={updatePreamp}
-          onDelete={deletePreamp}
-          onReorder={reorderPreamp}
-          addLabel="Add Preamp"
-          emptyMessage="No preamps defined yet. Add preamps to enable channel selection in the input list."
         />
       </Section>
     </div>

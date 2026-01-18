@@ -18,6 +18,11 @@ const registerSchema = z.object({
   name: z.string().min(1),
 });
 
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(6),
+});
+
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
@@ -75,6 +80,43 @@ router.post('/logout', requireAuth, (req, res) => {
 // GET /api/auth/me
 router.get('/me', requireAuth, (req, res) => {
   return res.json({ user: req.user });
+});
+
+// PUT /api/auth/change-password
+router.put('/change-password', requireAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+
+    // Get the full user record with password
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.id },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify current password
+    const validPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    // Hash new password and update
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+
+    return res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Change password error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // POST /api/auth/register
