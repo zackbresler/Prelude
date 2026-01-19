@@ -72,11 +72,29 @@ export interface MicrophonePlanItem {
   notes?: string;
 }
 
+export type TrackFormat = 'mono' | 'stereo';
+
+export const TRACK_COLOR_OPTIONS = [
+  { value: '', label: 'None' },
+  { value: 'red', label: 'Red' },
+  { value: 'orange', label: 'Orange' },
+  { value: 'yellow', label: 'Yellow' },
+  { value: 'green', label: 'Green' },
+  { value: 'cyan', label: 'Cyan' },
+  { value: 'blue', label: 'Blue' },
+  { value: 'purple', label: 'Purple' },
+  { value: 'pink', label: 'Pink' },
+] as const;
+
+export type TrackColor = typeof TRACK_COLOR_OPTIONS[number]['value'];
+
 export interface InputListItem {
   id: string;
-  channel: number;
+  channel: string;
   source: string;
   microphone: string;
+  trackFormat: TrackFormat;
+  trackColor?: TrackColor;
   preamp?: string;
   notes?: string;
 }

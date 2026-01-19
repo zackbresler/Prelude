@@ -298,8 +298,16 @@ async function generateDOCXDocument(project: Project): Promise<Document> {
     children.push(new Paragraph({ text: 'Input List', heading: HeadingLevel.HEADING_1 }));
     children.push(
       createTable(
-        ['Ch', 'Source', 'Microphone', 'Preamp', 'Notes'],
-        project.inputList.map((i) => [i.channel.toString(), i.source, i.microphone, i.preamp || '', i.notes || ''])
+        ['Ch', 'Format', 'Source', 'Microphone', 'Preamp', 'Color', 'Notes'],
+        project.inputList.map((i) => [
+          i.channel,
+          i.trackFormat === 'stereo' ? 'Stereo' : 'Mono',
+          i.source,
+          i.microphone,
+          i.preamp || '',
+          i.trackColor || '',
+          i.notes || '',
+        ])
       )
     );
     children.push(new Paragraph({ text: '' }));

@@ -232,8 +232,16 @@ async function generatePDFDocument(project: Project): Promise<jsPDF> {
     addTitle('Input List');
     autoTable(doc, {
       startY: yPos,
-      head: [['Ch', 'Source', 'Microphone', 'Preamp', 'Notes']],
-      body: project.inputList.map((i) => [i.channel.toString(), i.source, i.microphone, i.preamp || '', i.notes || '']),
+      head: [['Ch', 'Format', 'Source', 'Microphone', 'Preamp', 'Color', 'Notes']],
+      body: project.inputList.map((i) => [
+        i.channel,
+        i.trackFormat === 'stereo' ? 'Stereo' : 'Mono',
+        i.source,
+        i.microphone,
+        i.preamp || '',
+        i.trackColor || '',
+        i.notes || '',
+      ]),
       theme: 'striped',
       headStyles: { fillColor: [14, 165, 233] },
       margin: { left: 14, right: 14 },

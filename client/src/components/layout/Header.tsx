@@ -6,6 +6,8 @@ import { Button } from '@/components/common';
 import { exportToPDF } from '@/export/exportPDF';
 import { exportToDOCX } from '@/export/exportDOCX';
 import { exportToJSON } from '@/export/exportJSON';
+import { exportToREAPER } from '@/export/exportREAPER';
+import { exportDAWSetupCSV } from '@/export/exportDAWSetup';
 import ChangePasswordModal from '@/components/auth/ChangePasswordModal';
 
 export default function Header() {
@@ -16,7 +18,7 @@ export default function Header() {
 
   if (!project) return null;
 
-  const handleExport = async (format: 'pdf' | 'docx' | 'json') => {
+  const handleExport = async (format: 'pdf' | 'docx' | 'json' | 'reaper' | 'daw-csv') => {
     switch (format) {
       case 'pdf':
         await exportToPDF(project);
@@ -26,6 +28,12 @@ export default function Header() {
         break;
       case 'json':
         exportToJSON(project);
+        break;
+      case 'reaper':
+        exportToREAPER(project);
+        break;
+      case 'daw-csv':
+        exportDAWSetupCSV(project);
         break;
     }
   };
@@ -63,9 +71,22 @@ export default function Header() {
               </button>
               <button
                 onClick={() => handleExport('json')}
-                className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-surface-100 hover:text-gray-100 rounded-b-lg transition-colors"
+                className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-surface-100 hover:text-gray-100 transition-colors"
               >
                 Export as JSON
+              </button>
+              <div className="border-t border-surface-100 my-1"></div>
+              <button
+                onClick={() => handleExport('reaper')}
+                className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-surface-100 hover:text-gray-100 transition-colors"
+              >
+                Export for REAPER
+              </button>
+              <button
+                onClick={() => handleExport('daw-csv')}
+                className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-surface-100 hover:text-gray-100 rounded-b-lg transition-colors"
+              >
+                DAW Track Setup (CSV)
               </button>
             </div>
           </div>
