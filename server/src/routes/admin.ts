@@ -179,4 +179,161 @@ router.delete('/users/:id', async (req, res) => {
   }
 });
 
+// GET /api/admin/backup - Export all users and projects as JSON
+router.get('/backup', async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        approved: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const projects = await prisma.project.findMany({
+      select: {
+        id: true,
+        userId: true,
+        name: true,
+        data: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const backup = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      users,
+      projects,
+    };
+
+    const filename = `prelude-backup-${new Date().toISOString().split('T')[0]}.json`;
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.json(backup);
+  } catch (error) {
+    console.error('Backup error:', error);
+    return res.status(500).json({ error: 'Failed to create backup' });
+  }
+});
+
+const restoreSchema = z.object({
+  version: z.number(),
+  users: z.array(
+    z.object({
+      id: z.string(),
+      email: z.string().email(),
+      name: z.string(),
+      role: z.enum(['USER', 'ADMIN']),
+      approved: z.boolean(),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+    })
+  ),
+  projects: z.array(
+    z.object({
+      id: z.string(),
+      userId: z.string(),
+      name: z.string(),
+      data: z.string(),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+    })
+  ),
+});
+
+// POST /api/admin/restore - Import users and projects from backup JSON
+router.post('/restore', async (req, res) => {
+  try {
+    const backup = restoreSchema.parse(req.body);
+
+    // Track what was imported
+    let usersImported = 0;
+    let usersSkipped = 0;
+    let projectsImported = 0;
+    let projectsSkipped = 0;
+
+    // Map old user IDs to new user IDs (in case of conflicts)
+    const userIdMap = new Map<string, string>();
+
+    // Import users
+    for (const user of backup.users) {
+      const existing = await prisma.user.findUnique({
+        where: { email: user.email },
+      });
+
+      if (existing) {
+        // User exists - map old ID to existing ID
+        userIdMap.set(user.id, existing.id);
+        usersSkipped++;
+      } else {
+        // Create user with a temporary password (they'll need to reset)
+        const tempPassword = await bcrypt.hash(crypto.randomUUID(), 10);
+        const newUser = await prisma.user.create({
+          data: {
+            email: user.email,
+            password: tempPassword,
+            name: user.name,
+            role: user.role,
+            approved: user.approved,
+          },
+        });
+        userIdMap.set(user.id, newUser.id);
+        usersImported++;
+      }
+    }
+
+    // Import projects
+    for (const project of backup.projects) {
+      const mappedUserId = userIdMap.get(project.userId);
+      if (!mappedUserId) {
+        projectsSkipped++;
+        continue;
+      }
+
+      // Check if project with same name exists for this user
+      const existing = await prisma.project.findFirst({
+        where: {
+          userId: mappedUserId,
+          name: project.name,
+        },
+      });
+
+      if (existing) {
+        projectsSkipped++;
+      } else {
+        await prisma.project.create({
+          data: {
+            userId: mappedUserId,
+            name: project.name,
+            data: project.data,
+          },
+        });
+        projectsImported++;
+      }
+    }
+
+    return res.json({
+      message: 'Restore completed',
+      usersImported,
+      usersSkipped,
+      projectsImported,
+      projectsSkipped,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid backup format', details: error.errors });
+    }
+    console.error('Restore error:', error);
+    return res.status(500).json({ error: 'Failed to restore backup' });
+  }
+});
+
 export default router;

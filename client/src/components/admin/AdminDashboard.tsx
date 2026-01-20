@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { AdminUser, listUsers, createUser, updateUser, deleteUser } from '@/api/admin';
+import { AdminUser, listUsers, createUser, updateUser, deleteUser, downloadBackup, restoreBackup, RestoreResult } from '@/api/admin';
 import { ApiError } from '@/api/client';
 import { Button } from '@/components/common';
 import { format } from 'date-fns';
@@ -26,6 +26,9 @@ export function AdminDashboard({ onClose }: { onClose: () => void }) {
     role: 'USER',
   });
   const [formError, setFormError] = useState('');
+  const [backupStatus, setBackupStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [restoreResult, setRestoreResult] = useState<RestoreResult | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadUsers();
@@ -119,6 +122,38 @@ export function AdminDashboard({ onClose }: { onClose: () => void }) {
     setEditingUser(null);
     setFormData({ email: '', password: '', name: '', role: 'USER' });
     setFormError('');
+  };
+
+  const handleBackup = async () => {
+    setBackupStatus('loading');
+    try {
+      await downloadBackup();
+      setBackupStatus('success');
+      setTimeout(() => setBackupStatus('idle'), 3000);
+    } catch {
+      setBackupStatus('error');
+      setTimeout(() => setBackupStatus('idle'), 3000);
+    }
+  };
+
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!confirm('This will import users and projects from the backup file. Existing users with the same email will be skipped. Continue?')) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    try {
+      const result = await restoreBackup(file);
+      setRestoreResult(result);
+      await loadUsers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to restore backup');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -291,6 +326,58 @@ export function AdminDashboard({ onClose }: { onClose: () => void }) {
               </table>
             </div>
           )}
+
+          {/* Data Management Section */}
+          <div className="mt-8 pt-6 border-t border-surface-100">
+            <h3 className="text-lg font-medium text-gray-100 mb-4">Data Management</h3>
+            <p className="text-gray-400 text-sm mb-4">
+              Export all users and projects to a backup file, or restore from a previous backup.
+              Imported users will need to reset their passwords.
+            </p>
+
+            {restoreResult && (
+              <div className="mb-4 bg-green-500/10 border border-green-500/50 text-green-400 px-4 py-3 rounded-lg">
+                <p className="font-medium">Restore completed</p>
+                <p className="text-sm mt-1">
+                  Users: {restoreResult.usersImported} imported, {restoreResult.usersSkipped} skipped
+                  <br />
+                  Projects: {restoreResult.projectsImported} imported, {restoreResult.projectsSkipped} skipped
+                </p>
+                <button
+                  onClick={() => setRestoreResult(null)}
+                  className="text-sm underline mt-2 hover:text-green-300"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <Button
+                onClick={handleBackup}
+                variant="secondary"
+                disabled={backupStatus === 'loading'}
+              >
+                {backupStatus === 'loading' ? 'Downloading...' :
+                 backupStatus === 'success' ? 'Downloaded!' :
+                 backupStatus === 'error' ? 'Failed' : 'Export Backup'}
+              </Button>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleRestore}
+                accept=".json"
+                className="hidden"
+              />
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                variant="secondary"
+              >
+                Import Backup
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
