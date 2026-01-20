@@ -1,5 +1,5 @@
 import { useProjectStore } from '@/store/projectStore';
-import { Section, Table, Column } from '@/components/common';
+import { Section, Table, Column, Button } from '@/components/common';
 import type { InputListItem, Preamp, TrackFormat, TrackColor } from '@/types/project';
 import { TRACK_COLOR_OPTIONS } from '@/types/project';
 
@@ -75,6 +75,37 @@ export default function InputList() {
 
   const monoPreampOptions = generatePreampOptions('mono');
   const stereoPreampOptions = generatePreampOptions('stereo');
+
+  const importFromMicPlan = () => {
+    // Get existing sources in input list (case-insensitive check)
+    const existingSources = new Set(
+      project.inputList.map((item) => item.source.toLowerCase())
+    );
+
+    // Add entries from mic plan that aren't already in input list
+    let added = 0;
+    for (const mic of project.microphonePlan) {
+      if (mic.source && !existingSources.has(mic.source.toLowerCase())) {
+        addInputList({
+          channel: getNextChannel('mono'),
+          source: mic.source,
+          microphone: mic.microphone || '',
+          trackFormat: 'mono',
+          trackColor: '',
+          preamp: '',
+          notes: mic.notes || '',
+        });
+        existingSources.add(mic.source.toLowerCase());
+        added++;
+      }
+    }
+
+    if (added === 0) {
+      alert('All sources from the mic plan are already in the input list.');
+    }
+  };
+
+  const hasSourcesToImport = project.microphonePlan.some((m) => m.source);
 
   const inputColumns: Column<InputListItem>[] = [
     { key: 'channel', header: 'Ch', width: '80px', placeholder: '1 or 1-2' },
@@ -178,6 +209,13 @@ export default function InputList() {
         title="Input List"
         description="Channel assignments from source to console/interface. Track color may not be supported in all DAWs."
       >
+        {hasSourcesToImport && (
+          <div className="mb-4">
+            <Button variant="secondary" size="sm" onClick={importFromMicPlan}>
+              Import from Mic Plan
+            </Button>
+          </div>
+        )}
         <Table
           columns={inputColumns}
           data={project.inputList}
