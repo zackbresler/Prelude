@@ -4,6 +4,28 @@ import { format } from 'date-fns';
 import type { Project } from '@/types/project';
 import { PROJECT_TYPE_LABELS, SESSION_TYPE_LABELS } from '@/types/project';
 
+// Helper to get image dimensions from base64 data URL
+async function getImageDimensions(dataUrl: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      resolve({ width: img.width, height: img.height });
+    };
+    img.onerror = () => {
+      resolve({ width: 400, height: 300 }); // Default fallback
+    };
+    img.src = dataUrl;
+  });
+}
+
+// Helper to get image format from data URL
+function getImageFormat(dataUrl: string): string {
+  if (dataUrl.startsWith('data:image/png')) return 'PNG';
+  if (dataUrl.startsWith('data:image/gif')) return 'GIF';
+  if (dataUrl.startsWith('data:image/webp')) return 'WEBP';
+  return 'JPEG'; // Default to JPEG
+}
+
 // Convert HTML from rich text editor to plain text with formatting preserved
 function htmlToPlainText(html: string): string {
   if (!html) return '';
@@ -144,6 +166,62 @@ async function generatePDFDocument(project: Project): Promise<jsPDF> {
     addText('Acoustic Notes', '');
     addParagraph(htmlToPlainText(project.venue.acousticNotes));
   }
+
+  // Venue Images
+  if (project.venue.images && project.venue.images.length > 0) {
+    yPos += 4;
+    addSubtitle('Venue Images');
+    for (const image of project.venue.images) {
+      try {
+        const dims = await getImageDimensions(image.url);
+        const format = getImageFormat(image.url);
+
+        // Calculate scaled dimensions to fit page width (max 180mm)
+        const maxWidth = 180;
+        const maxHeight = 120;
+        let imgWidth = dims.width;
+        let imgHeight = dims.height;
+
+        // Scale to fit width
+        if (imgWidth > maxWidth) {
+          const scale = maxWidth / imgWidth;
+          imgWidth = maxWidth;
+          imgHeight = dims.height * scale;
+        }
+
+        // Scale to fit height if still too tall
+        if (imgHeight > maxHeight) {
+          const scale = maxHeight / imgHeight;
+          imgHeight = maxHeight;
+          imgWidth = imgWidth * scale;
+        }
+
+        // Check if we need a new page
+        if (yPos + imgHeight + 15 > 280) {
+          doc.addPage();
+          yPos = 20;
+        }
+
+        doc.addImage(image.url, format, 14, yPos, imgWidth, imgHeight);
+        yPos += imgHeight + 2;
+
+        // Add caption if present
+        if (image.caption) {
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'italic');
+          doc.setTextColor(100);
+          doc.text(image.caption, 14, yPos + 3);
+          doc.setTextColor(0);
+          yPos += 8;
+        } else {
+          yPos += 4;
+        }
+      } catch (e) {
+        // Skip images that fail to load
+        console.warn('Failed to add venue image to PDF:', e);
+      }
+    }
+  }
   yPos += 6;
 
   // Instrumentation
@@ -250,9 +328,67 @@ async function generatePDFDocument(project: Project): Promise<jsPDF> {
   }
 
   // Setup Notes
-  if (project.setupNotes.description) {
+  if (project.setupNotes.description || (project.setupNotes.diagrams && project.setupNotes.diagrams.length > 0)) {
     addTitle('Setup Notes');
-    addParagraph(htmlToPlainText(project.setupNotes.description));
+    if (project.setupNotes.description) {
+      addParagraph(htmlToPlainText(project.setupNotes.description));
+    }
+
+    // Setup Diagrams
+    if (project.setupNotes.diagrams && project.setupNotes.diagrams.length > 0) {
+      yPos += 4;
+      addSubtitle('Setup Diagrams');
+      for (const diagram of project.setupNotes.diagrams) {
+        try {
+          const dims = await getImageDimensions(diagram.url);
+          const format = getImageFormat(diagram.url);
+
+          // Calculate scaled dimensions to fit page width (max 180mm)
+          const maxWidth = 180;
+          const maxHeight = 120;
+          let imgWidth = dims.width;
+          let imgHeight = dims.height;
+
+          // Scale to fit width
+          if (imgWidth > maxWidth) {
+            const scale = maxWidth / imgWidth;
+            imgWidth = maxWidth;
+            imgHeight = dims.height * scale;
+          }
+
+          // Scale to fit height if still too tall
+          if (imgHeight > maxHeight) {
+            const scale = maxHeight / imgHeight;
+            imgHeight = maxHeight;
+            imgWidth = imgWidth * scale;
+          }
+
+          // Check if we need a new page
+          if (yPos + imgHeight + 15 > 280) {
+            doc.addPage();
+            yPos = 20;
+          }
+
+          doc.addImage(diagram.url, format, 14, yPos, imgWidth, imgHeight);
+          yPos += imgHeight + 2;
+
+          // Add caption if present
+          if (diagram.caption) {
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(100);
+            doc.text(diagram.caption, 14, yPos + 3);
+            doc.setTextColor(0);
+            yPos += 8;
+          } else {
+            yPos += 4;
+          }
+        } catch (e) {
+          // Skip diagrams that fail to load
+          console.warn('Failed to add setup diagram to PDF:', e);
+        }
+      }
+    }
     yPos += 6;
   }
 

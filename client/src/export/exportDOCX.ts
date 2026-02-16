@@ -11,10 +11,108 @@ import {
   BorderStyle,
   AlignmentType,
   PageBreak,
+  ImageRun,
 } from 'docx';
 import { format } from 'date-fns';
-import type { Project } from '@/types/project';
+import type { Project, VenueImage, SetupDiagram } from '@/types/project';
 import { PROJECT_TYPE_LABELS, SESSION_TYPE_LABELS } from '@/types/project';
+
+// Helper to get image dimensions from base64 data URL
+async function getImageDimensions(dataUrl: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      resolve({ width: img.width, height: img.height });
+    };
+    img.onerror = () => {
+      resolve({ width: 400, height: 300 }); // Default fallback
+    };
+    img.src = dataUrl;
+  });
+}
+
+// Helper to convert base64 data URL to ArrayBuffer
+function dataUrlToArrayBuffer(dataUrl: string): ArrayBuffer {
+  const base64 = dataUrl.split(',')[1];
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+// Helper to create image paragraphs with caption
+async function createImageParagraphs(
+  images: (VenueImage | SetupDiagram)[],
+  maxWidth: number = 500
+): Promise<Paragraph[]> {
+  const paragraphs: Paragraph[] = [];
+
+  for (const image of images) {
+    try {
+      const dims = await getImageDimensions(image.url);
+      const imageBuffer = dataUrlToArrayBuffer(image.url);
+
+      // Scale image to fit within maxWidth while maintaining aspect ratio
+      let imgWidth = dims.width;
+      let imgHeight = dims.height;
+      const maxHeight = 350;
+
+      if (imgWidth > maxWidth) {
+        const scale = maxWidth / imgWidth;
+        imgWidth = maxWidth;
+        imgHeight = Math.round(dims.height * scale);
+      }
+
+      if (imgHeight > maxHeight) {
+        const scale = maxHeight / imgHeight;
+        imgHeight = maxHeight;
+        imgWidth = Math.round(imgWidth * scale);
+      }
+
+      // Add the image
+      paragraphs.push(
+        new Paragraph({
+          children: [
+            new ImageRun({
+              data: imageBuffer,
+              transformation: {
+                width: imgWidth,
+                height: imgHeight,
+              },
+              type: 'png', // docx library handles both PNG and JPEG with this
+            }),
+          ],
+        })
+      );
+
+      // Add caption if present
+      if (image.caption) {
+        paragraphs.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: image.caption,
+                italics: true,
+                size: 18,
+                color: '666666',
+              }),
+            ],
+          })
+        );
+      }
+
+      // Add spacing after each image
+      paragraphs.push(new Paragraph({ text: '' }));
+    } catch (e) {
+      console.warn('Failed to add image to DOCX:', e);
+    }
+  }
+
+  return paragraphs;
+}
 
 // Convert HTML from rich text editor to plain text with formatting preserved
 function htmlToPlainText(html: string): string {
@@ -216,6 +314,19 @@ async function generateDOCXDocument(project: Project): Promise<Document> {
     );
     children.push(new Paragraph({ text: htmlToPlainText(project.venue.acousticNotes) }));
   }
+
+  // Venue Images
+  if (project.venue.images && project.venue.images.length > 0) {
+    children.push(new Paragraph({ text: '' }));
+    children.push(
+      new Paragraph({
+        children: [new TextRun({ text: 'Venue Images:', bold: true, size: 22 })],
+      })
+    );
+    children.push(new Paragraph({ text: '' }));
+    const imageParagraphs = await createImageParagraphs(project.venue.images);
+    children.push(...imageParagraphs);
+  }
   children.push(new Paragraph({ text: '' }));
 
   // Instrumentation
@@ -314,9 +425,24 @@ async function generateDOCXDocument(project: Project): Promise<Document> {
   }
 
   // Setup Notes
-  if (project.setupNotes.description) {
+  if (project.setupNotes.description || (project.setupNotes.diagrams && project.setupNotes.diagrams.length > 0)) {
     children.push(new Paragraph({ text: 'Setup Notes', heading: HeadingLevel.HEADING_1 }));
-    children.push(new Paragraph({ text: htmlToPlainText(project.setupNotes.description) }));
+    if (project.setupNotes.description) {
+      children.push(new Paragraph({ text: htmlToPlainText(project.setupNotes.description) }));
+    }
+
+    // Setup Diagrams
+    if (project.setupNotes.diagrams && project.setupNotes.diagrams.length > 0) {
+      children.push(new Paragraph({ text: '' }));
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: 'Setup Diagrams:', bold: true, size: 22 })],
+        })
+      );
+      children.push(new Paragraph({ text: '' }));
+      const diagramParagraphs = await createImageParagraphs(project.setupNotes.diagrams);
+      children.push(...diagramParagraphs);
+    }
     children.push(new Paragraph({ text: '' }));
   }
 
