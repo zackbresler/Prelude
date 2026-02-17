@@ -1,6 +1,8 @@
-# Prelude
+# Prelude Lite
 
-A pre-production planning tool for music recording projects. Organize personnel, equipment, track lists, microphone plans, schedules, and more.
+A browser-based pre-production planning tool for music recording projects. Organize personnel, equipment, track lists, microphone plans, schedules, and more — no server required.
+
+> **Looking for the full version?** [Prelude](https://github.com/zackbresler/Prelude) (main branch) offers multi-user support, persistent server storage, and user authentication.
 
 ## Features
 
@@ -14,187 +16,93 @@ A pre-production planning tool for music recording projects. Organize personnel,
 - **Session Scheduling**: Plan recording sessions with detailed schedules
 - **Venue Information**: Store venue details and photos
 - **Dolby Atmos Support**: Special configuration for immersive audio projects
-- **Export Options**: Export projects to PDF, DOCX, or JSON
+- **Export Options**: Export projects to PDF, DOCX, JSON, or REAPER
 
-## Quick Start with Docker
+## How It Works
 
-The easiest way to run Prelude is with Docker.
+Prelude Lite runs entirely in your browser. Your projects are stored locally using IndexedDB — no account or server needed.
 
-### Option A: Minimal Setup
+**Important:** Your data is stored in this browser only. Clearing browsing data will delete your projects. Use the backup feature regularly to protect your work.
 
-Create a `docker-compose.yml` file:
+## Quick Start
 
-```yaml
-version: '3.8'
+### Option 1: Use the Hosted Version
 
-services:
-  prelude:
-    build: https://github.com/zbresler/prelude.git
-    ports:
-      - "3000:3000"
-    volumes:
-      - prelude-data:/app/server/data
-    environment:
-      - SESSION_SECRET=change-this-to-at-least-32-random-characters
-      - ADMIN_EMAIL=your@email.com
-      - ADMIN_PASSWORD=your-secure-password
-    restart: unless-stopped
+Visit the hosted version (if available) — no installation needed.
 
-volumes:
-  prelude-data:
-```
+### Option 2: Deploy Your Own
 
-Then run:
+#### Netlify
 
-```bash
-docker-compose up -d
-```
+1. Fork this repository
+2. Connect to Netlify
+3. Set build command: `npm run build`
+4. Set publish directory: `client/dist`
+5. Deploy
 
-### Option B: Clone and Configure
+#### GitHub Pages
 
-**1. Clone the repository:**
+1. Fork this repository
+2. Run `npm install && npm run build` in the `client` folder
+3. Deploy the `client/dist` folder to GitHub Pages
+
+#### Local Development
 
 ```bash
-git clone https://github.com/zbresler/prelude.git
-cd prelude
-```
-
-**2. Configure environment:**
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and set your values:
-
-```env
-SESSION_SECRET="your-secure-random-string-at-least-32-characters"
-ADMIN_EMAIL="your@email.com"
-ADMIN_PASSWORD="your-secure-password"
-ADMIN_NAME="Your Name"
-```
-
-**3. Start the application:**
-
-```bash
-docker-compose up -d
-```
-
----
-
-The application will be available at `http://localhost:3000`. Log in with the admin credentials you configured.
-
-## Configuration Options
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `3000` | Server port |
-| `SESSION_SECRET` | (required) | Secret for session encryption (min 32 chars) |
-| `SESSION_MAX_AGE` | `604800000` | Session duration in ms (default: 7 days) |
-| `ALLOW_REGISTRATION` | `false` | Allow users to self-register |
-| `REQUIRE_APPROVAL` | `false` | Require admin approval for new users |
-| `ADMIN_EMAIL` | `admin@example.com` | Default admin email |
-| `ADMIN_PASSWORD` | `changeme` | Default admin password |
-| `ADMIN_NAME` | `Administrator` | Default admin display name |
-| `COOKIE_SECURE` | `auto` | Cookie secure flag: `auto` (HTTPS in production), `true`, or `false` |
-
-## Development Setup
-
-### Prerequisites
-
-- Node.js 20+
-- npm 9+
-
-### Install dependencies
-
-```bash
+cd client
 npm install
-```
-
-### Initialize the database
-
-```bash
-cd server
-npx prisma migrate dev
-npx prisma db seed
-```
-
-### Start development servers
-
-Run both frontend and backend:
-
-```bash
-npm run dev:all
-```
-
-Or run them separately:
-
-```bash
-# Terminal 1 - Backend
-npm run dev:server
-
-# Terminal 2 - Frontend
 npm run dev
 ```
 
-- Frontend: `http://localhost:5173`
-- Backend API: `http://localhost:3001`
+Open `http://localhost:5173`
 
-### Build for production
+## Backup & Restore
 
-```bash
-npm run build
-```
+### Backing Up Your Projects
+
+Click **Export All** in the header to download a JSON backup of all your projects.
+
+### Restoring from Backup
+
+Click **Import Backup** to restore projects from a backup file. You can:
+- **Merge**: Add imported projects alongside existing ones
+- **Replace**: Delete existing projects and import fresh
+
+### Compatibility
+
+Prelude Lite can import:
+- Single project JSON exports from either version
+- Full backups from the self-hosted Prelude server
+- Lite backup files
+
+## Browser Support
+
+Works in all modern browsers (Chrome, Firefox, Safari, Edge).
+
+**Note:** In private/incognito mode, data may not persist between sessions.
 
 ## Project Structure
 
 ```
-prelude/
-├── client/                 # React frontend
-│   ├── src/
-│   │   ├── api/           # API client functions
-│   │   ├── components/    # React components
-│   │   ├── store/         # Zustand state stores
-│   │   └── types/         # TypeScript types
-│   └── ...
-├── server/                 # Express backend
-│   ├── src/
-│   │   ├── routes/        # API routes
-│   │   ├── middleware/    # Express middleware
-│   │   └── lib/           # Utilities
-│   └── prisma/            # Database schema
-├── Dockerfile
-├── docker-compose.yml
-└── package.json
+client/
+├── src/
+│   ├── api/           # Local storage API
+│   ├── components/    # React components
+│   ├── storage/       # IndexedDB layer
+│   ├── store/         # Zustand state stores
+│   └── types/         # TypeScript types
+├── netlify.toml       # Netlify deployment config
+└── ...
 ```
 
-## User Management
+## Full Version
 
-Admin users can manage users through the Admin panel (accessible via the "Admin" link in the header).
+For teams or persistent server-side storage, see the [full version of Prelude](https://github.com/zackbresler/Prelude) which includes:
 
-- Create new users with specific roles (USER or ADMIN)
-- Edit existing users
-- Delete users (cascades to delete their projects)
-
-## Data Persistence
-
-When running with Docker, data is persisted in a Docker volume (`prelude-data`). This includes:
-
-- SQLite database with all user and project data
-
-To backup your data:
-
-```bash
-docker cp prelude-prelude-1:/app/server/data ./backup
-```
-
-## Migrating from localStorage Version
-
-If you have projects saved in the browser's localStorage from an earlier version:
-
-1. Export each project as JSON from the old version
-2. Log into the new version with your account
-3. Use "Import Project" to import each JSON file
+- Multi-user support with authentication
+- Server-side database storage
+- Admin dashboard for user management
+- Docker deployment
 
 ## License
 
