@@ -1,23 +1,23 @@
 import { useState, useRef, useEffect } from 'react';
 import { useProjectStore } from '@/store/projectStore';
-import { useAuthStore } from '@/store/authStore';
 import { PROJECT_TYPE_LABELS, ProjectType, Project } from '@/types/project';
 import { Button, Select } from '@/components/common';
-import { AdminDashboard } from '@/components/admin/AdminDashboard';
 import { BulkExportModal } from '@/components/BulkExportModal';
+import { getAllProjects, saveProject, clearAllProjects, checkStorageAvailable } from '@/storage/indexedDB';
 import { format } from 'date-fns';
 
 export default function Dashboard() {
   const { projectList, loadProjects, createProject, duplicateProject, deleteProject, setCurrentProject, importProject, isLoading, error } = useProjectStore();
-  const { user, logout } = useAuthStore();
   const [showNewProject, setShowNewProject] = useState(false);
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showBulkExport, setShowBulkExport] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectType, setNewProjectType] = useState<ProjectType>('other');
+  const [storageAvailable, setStorageAvailable] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const backupInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    checkStorageAvailable().then(setStorageAvailable);
     loadProjects();
   }, [loadProjects]);
 
@@ -51,6 +51,77 @@ export default function Dashboard() {
     reader.readAsText(file);
   };
 
+  const handleExportAllProjects = async () => {
+    try {
+      const projects = await getAllProjects();
+      const exportData = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        projects,
+      };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `prelude-backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to export projects:', err);
+      alert('Failed to export projects');
+    }
+  };
+
+  const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const backup = JSON.parse(event.target?.result as string);
+        if (!backup.projects || !Array.isArray(backup.projects)) {
+          throw new Error('Invalid backup format');
+        }
+
+        const confirmImport = confirm(
+          `This will import ${backup.projects.length} project(s). Do you want to merge with existing projects or replace all?\n\nOK = Merge (add to existing)\nCancel = Replace all (delete existing first)`
+        );
+
+        if (!confirmImport) {
+          // Replace all - clear existing first
+          await clearAllProjects();
+        }
+
+        // Import all projects, handling both lite and self-hosted backup formats
+        for (const project of backup.projects) {
+          // Self-hosted backups store data as a JSON string; lite stores it as an object
+          const data = typeof project.data === 'string' ? JSON.parse(project.data) : project.data;
+          await saveProject({
+            id: project.id,
+            name: project.name,
+            data,
+            createdAt: project.createdAt,
+            updatedAt: project.updatedAt,
+          });
+        }
+
+        // Reload project list
+        await loadProjects();
+        alert(`Successfully imported ${backup.projects.length} project(s)`);
+      } catch (err) {
+        console.error('Failed to import backup:', err);
+        alert('Invalid backup file');
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset input
+    if (backupInputRef.current) {
+      backupInputRef.current.value = '';
+    }
+  };
+
   const projectTypeOptions = Object.entries(PROJECT_TYPE_LABELS).map(([value, label]) => ({
     value,
     label,
@@ -65,6 +136,7 @@ export default function Dashboard() {
               <h1 className="text-2xl font-bold font-display">
                 <span className="text-primary-400">Pre</span>
                 <span className="text-gray-100">lude</span>
+                <span className="text-xs ml-2 text-gray-500 font-normal">Lite</span>
               </h1>
               <p className="text-sm text-gray-400">Pre-Production Planning Tool</p>
             </div>
@@ -77,26 +149,32 @@ export default function Dashboard() {
                   accept=".json"
                   className="hidden"
                 />
+                <input
+                  type="file"
+                  ref={backupInputRef}
+                  onChange={handleImportBackup}
+                  accept=".json"
+                  className="hidden"
+                />
                 <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>
                   Import Project
                 </Button>
                 <Button onClick={() => setShowNewProject(true)}>New Project</Button>
               </div>
               <div className="flex items-center gap-3 pl-4 border-l border-surface-100">
-                <span className="text-sm text-gray-400">{user?.name}</span>
-                {user?.role === 'ADMIN' && (
-                  <button
-                    onClick={() => setShowAdminPanel(true)}
-                    className="text-sm text-primary-400 hover:text-primary-300 transition-colors"
-                  >
-                    Admin
-                  </button>
-                )}
                 <button
-                  onClick={logout}
+                  onClick={handleExportAllProjects}
                   className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                  title="Export all projects as a backup file"
                 >
-                  Sign Out
+                  Export All
+                </button>
+                <button
+                  onClick={() => backupInputRef.current?.click()}
+                  className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                  title="Import projects from a backup file"
+                >
+                  Import Backup
                 </button>
               </div>
             </div>
@@ -105,6 +183,16 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {!storageAvailable && (
+          <div className="mb-8 bg-yellow-500/10 border border-yellow-500/50 text-yellow-400 px-4 py-3 rounded-lg">
+            <p className="font-medium">Storage unavailable</p>
+            <p className="text-sm mt-1">
+              Your browser may be in private/incognito mode or blocking site data.
+              Projects won't be saved between sessions.
+            </p>
+          </div>
+        )}
+
         {showNewProject && (
           <div className="mb-8 bg-surface-300 rounded-xl shadow-lg border border-surface-100 p-6">
             <h2 className="text-lg font-semibold text-gray-100 font-display mb-4">Create New Project</h2>
@@ -224,12 +312,34 @@ export default function Dashboard() {
             <Button variant="secondary" onClick={() => setShowBulkExport(true)}>
               Bulk Export Production Plans
             </Button>
+            <p className="mt-4 text-xs text-gray-500">
+              Your projects are stored in this browser. Clearing browsing data for this site will delete your work.{' '}
+              <button
+                onClick={handleExportAllProjects}
+                className="text-primary-600 hover:text-primary-500 underline"
+              >
+                Backup your projects
+              </button>{' '}
+              before clearing browsing data.
+            </p>
           </div>
         )}
-      </main>
 
-      {/* Admin Panel Modal */}
-      {showAdminPanel && <AdminDashboard onClose={() => setShowAdminPanel(false)} />}
+        {/* Footer */}
+        <div className="mt-12 pt-8 border-t border-surface-100 text-center">
+          <p className="text-xs text-gray-500">
+            You can deploy Prelude as a self-hosted server application with persistent storage and user authentication.{' '}
+            <a
+              href="https://github.com/zackbresler/Prelude"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-600 hover:text-primary-500 underline"
+            >
+              View the full version of Prelude on GitHub
+            </a>
+          </p>
+        </div>
+      </main>
 
       {/* Bulk Export Modal */}
       {showBulkExport && <BulkExportModal onClose={() => setShowBulkExport(false)} />}
