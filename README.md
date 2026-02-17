@@ -28,7 +28,7 @@ Prelude Lite runs entirely in your browser. Your projects are stored locally usi
 
 ### Option 1: Use the Hosted Version
 
-Visit the hosted version (if available) — no installation needed.
+[Visit the hosted version](https://zackbresler.com/prelude) — no installation needed.
 
 ### Option 2: Deploy Your Own
 
